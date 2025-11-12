@@ -4,278 +4,221 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   Shield,
-  Users,
+  HardHat,
   CheckCircle,
-  Award,
-  AlertTriangle,
-  Calendar,
-  Building2,
+  Users,
+  FileText,
+  Camera,
   ArrowRight,
-  LayoutDashboard,
-  BookOpen
+  Building2
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
-import { StatCard } from '@/components/ui/StatCard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { companies, safetyMetrics, safetyAlerts, certifications } from '@/lib/data';
-import { getExpirationStatus } from '@/lib/utils/helpers';
+import { useCompany } from '@/lib/context/CompanyContext';
 
 export default function HomePage() {
-  // Calculate aggregate statistics
-  const aggregateMetrics = safetyMetrics.find(m => !m.companyId);
-  const criticalAlerts = safetyAlerts.filter(a => a.priority === 'critical' && !a.read);
-
-  // Calculate certifications expiring soon
-  const expiringCerts = certifications.filter(c => {
-    const status = getExpirationStatus(c.daysUntilExpiration);
-    return status.status === 'expiring_critical' || status.status === 'expiring_soon';
-  });
+  const { selectedCompany } = useCompany();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Header />
 
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 text-white overflow-hidden">
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.1) 35px, rgba(255,255,255,.1) 70px)',
-          }} />
+      {/* Hero Section - Professional Landing */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
+        {/* Subtle Pattern Overlay */}
+        <div className="absolute inset-0 opacity-5">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+              backgroundSize: '40px 40px',
+            }}
+          />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            {/* Animated Shield Badge */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-              className="inline-flex items-center justify-center w-24 h-24 mb-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-2xl"
-            >
-              <Shield className="w-14 h-14 text-white" />
-            </motion.div>
+          {/* Hard Hat Icon */}
+          <motion.div
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="flex justify-center mb-8"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+              <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-full shadow-2xl">
+                <HardHat className="w-16 h-16 text-white" />
+              </div>
+            </div>
+          </motion.div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6"
-            >
-              Roofing Safety Management Platform
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="text-xl sm:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto"
-            >
-              Comprehensive OSHA Compliance Management for {companies.length} Roofing Companies
-              <br />
-              <span className="text-base text-blue-200 mt-2 block">Oregon & Washington Operations</span>
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-            >
-              <Link href="/dashboard">
-                <Button size="lg" variant="success" className="min-w-[200px]">
-                  <LayoutDashboard className="w-5 h-5 mr-2" />
-                  Access Dashboard
-                </Button>
-              </Link>
-              <Link href="/safety-resources">
-                <Button size="lg" variant="outline" className="min-w-[200px] bg-white/10 text-white border-white/30 hover:bg-white/20">
-                  <BookOpen className="w-5 h-5 mr-2" />
-                  Safety Resources
-                </Button>
-              </Link>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Real-Time Statistics */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Days Without Incident"
-            value={aggregateMetrics?.daysWithoutIncident || 0}
-            icon={<Calendar className="w-6 h-6" />}
-            color="#10B981"
-            delay={0}
-          />
-          <StatCard
-            title="Workers Trained"
-            value={`${certifications.length}+`}
-            icon={<Users className="w-6 h-6" />}
-            color="#3B82F6"
-            delay={0.1}
-          />
-          <StatCard
-            title="Compliance Rate"
-            value={`${aggregateMetrics?.compliancePercentage || 0}%`}
-            icon={<CheckCircle className="w-6 h-6" />}
-            color="#059669"
-            delay={0.2}
-            trend={{
-              value: 2,
-              label: 'vs. last quarter',
-              positive: true
-            }}
-          />
-          <StatCard
-            title="Active Certifications"
-            value={aggregateMetrics?.activeCertifications || 0}
-            icon={<Award className="w-6 h-6" />}
-            color="#F59E0B"
-            delay={0.3}
-          />
-        </div>
-      </section>
-
-      {/* Critical Alerts */}
-      {criticalAlerts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-center max-w-4xl mx-auto"
           >
-            <Card className="border-l-4 border-red-600">
-              <CardContent className="flex items-start space-x-4 p-6">
-                <div className="flex-shrink-0 mt-1">
-                  <AlertTriangle className="w-6 h-6 text-red-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Critical Alerts Requiring Attention
-                  </h3>
-                  <div className="space-y-2">
-                    {criticalAlerts.map((alert) => (
-                      <div key={alert.id} className="flex items-center justify-between">
-                        <p className="text-gray-700">{alert.message}</p>
-                        <Badge variant="danger" size="sm">Action Required</Badge>
-                      </div>
-                    ))}
-                  </div>
-                  <Link href="/dashboard" className="inline-flex items-center mt-4 text-blue-600 hover:text-blue-800 font-medium">
-                    View All Alerts <ArrowRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </section>
-      )}
+            <h1 className="text-5xl md:text-6xl font-bold mb-6">
+              {selectedCompany.name}
+            </h1>
+            <p className="text-xl md:text-2xl text-blue-100 mb-4">
+              OSHA Compliance & Safety Management
+            </p>
+            <p className="text-lg text-blue-200 mb-10">
+              Professional roofing safety compliance for Oregon & Washington operations
+            </p>
 
-      {/* Companies Overview */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 mb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-        >
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">
-            Companies Under Management
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {companies.map((company, index) => {
-              const companyMetrics = safetyMetrics.find(m => m.companyId === company.id);
-              return (
-                <motion.div
-                  key={company.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.7 + index * 0.1 }}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/dashboard">
+                <Button size="lg" variant="success" className="btn-glow min-w-[200px]">
+                  <Shield className="w-5 h-5 mr-2" />
+                  Safety Dashboard
+                </Button>
+              </Link>
+              <Link href="/team">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="min-w-[200px] bg-white/10 text-white border-white/30 hover:bg-white/20"
                 >
-                  <Link href={`/companies/${company.id}`}>
-                    <Card hover>
-                      <div
-                        className="h-2 rounded-t-lg"
-                        style={{ backgroundColor: company.color }}
-                      />
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle>{company.name}</CardTitle>
-                            <p className="text-sm text-gray-500 mt-1">{company.location}</p>
-                          </div>
-                          <Building2 className="w-6 h-6 text-gray-400" />
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Employees</span>
-                            <span className="font-semibold text-gray-900">{company.employeeCount}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Compliance</span>
-                            <Badge variant="success" size="sm">
-                              {companyMetrics?.compliancePercentage || 0}%
-                            </Badge>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">TRIR</span>
-                            <span className="font-semibold text-gray-900">
-                              {companyMetrics?.trir.toFixed(1) || '0.0'}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Days Without Incident</span>
-                            <Badge variant="success" size="sm">
-                              {companyMetrics?.daysWithoutIncident || 0}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <p className="text-xs text-gray-500">
-                            {company.yearsInBusiness}+ years in business
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
+                  <Users className="w-5 h-5 mr-2" />
+                  Manage Team
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Wave Separator */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 120" className="w-full h-auto">
+            <path
+              fill="#f8fafc"
+              d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"
+            ></path>
+          </svg>
+        </div>
       </section>
 
-      {/* Quick Stats Row */}
-      <section className="bg-white border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <p className="text-4xl font-bold text-blue-600">{companies.length}</p>
-              <p className="mt-2 text-sm text-gray-600">Companies Managed</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-green-600">
-                {companies.reduce((sum, c) => sum + c.employeeCount, 0)}+
+      {/* Quick Access Cards */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              icon: <Users className="w-8 h-8" />,
+              title: 'Team Management',
+              description: 'Add crew members, track certifications, manage credentials',
+              href: '/team',
+              color: '#3b82f6',
+            },
+            {
+              icon: <FileText className="w-8 h-8" />,
+              title: 'OSHA Compliance',
+              description: 'State-specific checklists for Oregon & Washington',
+              href: '/compliance',
+              color: '#10b981',
+            },
+            {
+              icon: <Camera className="w-8 h-8" />,
+              title: 'Job Documentation',
+              description: 'Upload photos, track incidents, document safety',
+              href: '/incidents',
+              color: '#f97316',
+            },
+            {
+              icon: <Building2 className="w-8 h-8" />,
+              title: 'Homeowner View',
+              description: 'Professional crew showcase for customers',
+              href: '/homeowner',
+              color: '#8b5cf6',
+            },
+          ].map((card, index) => (
+            <motion.div
+              key={card.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
+            >
+              <Link href={card.href}>
+                <div className="floating-panel p-6 h-full cursor-pointer group">
+                  <div
+                    className="flex items-center justify-center w-14 h-14 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300"
+                    style={{
+                      background: `linear-gradient(135deg, ${card.color}20, ${card.color}10)`,
+                      boxShadow: `0 0 20px ${card.color}30`,
+                    }}
+                  >
+                    <div style={{ color: card.color }}>{card.icon}</div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {card.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-4">{card.description}</p>
+                  <div className="flex items-center text-sm font-medium" style={{ color: card.color }}>
+                    Get Started <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Compliance Status Bar */}
+      <section className="bg-white border-y border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="text-center md:text-left">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {selectedCompany.name}
+              </h3>
+              <p className="text-gray-600">
+                {selectedCompany.location} • {selectedCompany.employeeCount} Employees
               </p>
-              <p className="mt-2 text-sm text-gray-600">Total Employees</p>
             </div>
-            <div>
-              <p className="text-4xl font-bold text-orange-600">{expiringCerts.length}</p>
-              <p className="mt-2 text-sm text-gray-600">Certifications Expiring Soon</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-purple-600">
-                {aggregateMetrics?.nearMisses || 0}
-              </p>
-              <p className="mt-2 text-sm text-gray-600">Near Misses Reported</p>
+
+            <div className="flex flex-wrap gap-6 justify-center">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600 mb-1">
+                  <CheckCircle className="w-8 h-8 inline-block" />
+                </div>
+                <p className="text-sm text-gray-600">OSHA Compliant</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600 mb-1">
+                  {selectedCompany.yearsInBusiness}+
+                </div>
+                <p className="text-sm text-gray-600">Years Experience</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-600 mb-1">
+                  {selectedCompany.employeeCount}
+                </div>
+                <p className="text-sm text-gray-600">Team Members</p>
+              </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="floating-panel p-12 text-center">
+          <Shield className="w-16 h-16 text-blue-600 mx-auto mb-6" />
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Ready to manage your safety compliance?
+          </h2>
+          <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+            Prevent OSHA violations, track certifications, and keep your crews safe.
+            Start by adding your team members.
+          </p>
+          <Link href="/team">
+            <Button size="lg" className="btn-glow">
+              <Users className="w-5 h-5 mr-2" />
+              Add Your First Team Member
+            </Button>
+          </Link>
         </div>
       </section>
     </div>
