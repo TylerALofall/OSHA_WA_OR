@@ -61,7 +61,17 @@ This platform addresses the **real-world compliance pressure** Sandra faces mana
 
 ## 🚀 Quick Start
 
-### Installation & Running
+### Super Easy Way (For Sandra! ☕)
+
+**Go back one folder** and use the starter scripts:
+
+- 🪟 **Windows:** Double-click `START-PLATFORM.bat`
+- 🍎 **Mac/Linux:** Double-click `start-platform.sh`
+- 📖 **Need help?** Open `INSTRUCTIONS-FOR-SANDRA.html` in your browser
+
+The scripts do everything automatically! Just wait for "PLATFORM IS READY!" then open http://localhost:3000
+
+### Manual Way (For Nerds)
 
 ```bash
 # Install dependencies

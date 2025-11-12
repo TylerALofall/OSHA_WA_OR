@@ -13,7 +13,8 @@ import {
   BarChart3,
   Bell,
   Menu,
-  X
+  X,
+  Coffee
 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 
@@ -31,6 +32,7 @@ const navigation = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCount] = useState(3);
+  const [showCoffeeMessage, setShowCoffeeMessage] = useState(false);
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -74,6 +76,29 @@ export function Header() {
                 </span>
               )}
             </button>
+
+            {/* Coffee Button with Smartass Message */}
+            <div className="relative">
+              <button
+                onMouseEnter={() => setShowCoffeeMessage(true)}
+                onMouseLeave={() => setShowCoffeeMessage(false)}
+                onClick={() => alert("☕ Safety first, but coffee's a close second. OSHA says nothing about caffeine limits! 😏")}
+                className="relative p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 hover:scale-110"
+                title="Click for your daily dose of wisdom"
+              >
+                <Coffee className="w-5 h-5" />
+              </button>
+              {showCoffeeMessage && (
+                <div className="absolute right-0 top-12 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-50 animate-fadeIn">
+                  <div className="absolute -top-2 right-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                  <p className="font-semibold mb-1">☕ Coffee-Fueled Compliance™</p>
+                  <p className="text-gray-300">
+                    Because OSHA violations are expensive, but this coffee? Priceless.
+                    Click me for wisdom!
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* User Badge */}
             <div className="hidden sm:block">
