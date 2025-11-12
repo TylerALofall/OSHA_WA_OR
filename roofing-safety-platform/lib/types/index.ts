@@ -7,6 +7,7 @@ export interface Company {
   address: string;
   website?: string;
   phone?: string;
+  email?: string;
   specialization: string[];
   yearsInBusiness: number;
   employeeCount: number;

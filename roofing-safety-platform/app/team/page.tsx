@@ -1,50 +1,139 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Search, Filter, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { employees, companies, certifications } from '@/lib/data';
-import { getExpirationStatus, formatDateShort } from '@/lib/utils/helpers';
-import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { FileUpload } from '@/components/ui/FileUpload';
+import {
+  UserPlus,
+  Users,
+  Mail,
+  Phone,
+  Calendar,
+  Award,
+  X,
+  Briefcase,
+  Camera
+} from 'lucide-react';
+import { useCompany } from '@/lib/context/CompanyContext';
+import {
+  saveEmployee,
+  getEmployees,
+  deleteEmployee,
+  generateId,
+  fileToBase64
+} from '@/lib/utils/storage';
+
+interface Employee {
+  id: string;
+  companyId: string;
+  firstName: string;
+  lastName: string;
+  position: string;
+  email: string;
+  phone: string;
+  hireDate: string;
+  yearsExperience: number;
+  photo?: string;
+  certificates: {
+    id: string;
+    name: string;
+    file: string;
+    uploadDate: string;
+  }[];
+  pastJobs: string;
+}
 
 export default function TeamPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { selectedCompany } = useCompany();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState<Partial<Employee>>({
+    firstName: '',
+    lastName: '',
+    position: '',
+    email: '',
+    phone: '',
+    hireDate: '',
+    yearsExperience: 0,
+    pastJobs: '',
+  });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [certificateFiles, setCertificateFiles] = useState<File[]>([]);
 
-  // Filter employees
-  const filteredEmployees = employees.filter(employee => {
-    const matchesSearch =
-      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase());
+  // Load employees from localStorage
+  useEffect(() => {
+    const loadedEmployees = getEmployees();
+    setEmployees(loadedEmployees);
+  }, []);
 
-    const matchesCompany = selectedCompany === 'all' || employee.companyId === selectedCompany;
+  // Filter employees by selected company
+  const companyEmployees = employees.filter(
+    (emp) => emp.companyId === selectedCompany.id
+  );
 
-    if (statusFilter === 'expired') {
-      return matchesSearch && matchesCompany && employee.certifications.some(c => c.status === 'expired');
-    } else if (statusFilter === 'expiring') {
-      return matchesSearch && matchesCompany && employee.certifications.some(c =>
-        c.status === 'expiring_critical' || c.status === 'expiring_soon'
-      );
+  const handleAddEmployee = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.position) {
+      alert('Please fill in all required fields (Name and Position)');
+      return;
     }
 
-    return matchesSearch && matchesCompany;
-  });
+    // Convert photo to base64
+    let photoBase64 = '';
+    if (photoFile) {
+      photoBase64 = await fileToBase64(photoFile);
+    }
 
-  // Get employee company
-  const getEmployeeCompany = (companyId: string) => {
-    return companies.find(c => c.id === companyId);
+    // Convert certificates to base64
+    const certificates = await Promise.all(
+      certificateFiles.map(async (file) => ({
+        id: generateId(),
+        name: file.name,
+        file: await fileToBase64(file),
+        uploadDate: new Date().toISOString(),
+      }))
+    );
+
+    const newEmployee: Employee = {
+      id: generateId(),
+      companyId: selectedCompany.id,
+      firstName: formData.firstName!,
+      lastName: formData.lastName!,
+      position: formData.position!,
+      email: formData.email || '',
+      phone: formData.phone || '',
+      hireDate: formData.hireDate || new Date().toISOString(),
+      yearsExperience: formData.yearsExperience || 0,
+      photo: photoBase64,
+      certificates,
+      pastJobs: formData.pastJobs || '',
+    };
+
+    saveEmployee(newEmployee);
+    setEmployees([...employees, newEmployee]);
+
+    // Reset form
+    setShowAddModal(false);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      position: '',
+      email: '',
+      phone: '',
+      hireDate: '',
+      yearsExperience: 0,
+      pastJobs: '',
+    });
+    setPhotoFile(null);
+    setCertificateFiles([]);
   };
 
-  // Get certification status counts for an employee
-  const getCertStatusCounts = (employeeCerts: typeof certifications) => {
-    return {
-      valid: employeeCerts.filter(c => c.status === 'valid').length,
-      expiring: employeeCerts.filter(c => c.status === 'expiring_soon' || c.status === 'expiring_critical').length,
-      expired: employeeCerts.filter(c => c.status === 'expired').length,
-    };
+  const handleDeleteEmployee = (id: string) => {
+    if (confirm('Are you sure you want to remove this team member?')) {
+      deleteEmployee(id);
+      setEmployees(employees.filter((emp) => emp.id !== id));
+    }
   };
 
   return (
@@ -53,310 +142,325 @@ export default function TeamPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Team & Credentials</h1>
-          <p className="text-gray-600">
-            Manage employees and track certification expirations across all companies
-          </p>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Employees</p>
-                  <p className="text-3xl font-bold text-gray-900">{employees.length}</p>
-                </div>
-                <CheckCircle className="w-10 h-10 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Valid Certifications</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {certifications.filter(c => c.status === 'valid').length}
-                  </p>
-                </div>
-                <CheckCircle className="w-10 h-10 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Expiring Soon</p>
-                  <p className="text-3xl font-bold text-orange-600">
-                    {certifications.filter(c => c.status === 'expiring_soon' || c.status === 'expiring_critical').length}
-                  </p>
-                </div>
-                <Clock className="w-10 h-10 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Expired</p>
-                  <p className="text-3xl font-bold text-red-600">
-                    {certifications.filter(c => c.status === 'expired').length}
-                  </p>
-                </div>
-                <XCircle className="w-10 h-10 text-red-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-6 space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by name, position, or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Team Management
+            </h1>
+            <p className="text-gray-600">
+              Manage crew members for {selectedCompany.name}
+            </p>
           </div>
-
-          {/* Filter Row */}
-          <div className="flex flex-wrap gap-4">
-            {/* Company Filter */}
-            <select
-              value={selectedCompany}
-              onChange={(e) => setSelectedCompany(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Companies</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Statuses</option>
-              <option value="expiring">Expiring Soon</option>
-              <option value="expired">Expired</option>
-            </select>
-
-            <div className="flex-1 flex items-center justify-end text-sm text-gray-600">
-              Showing {filteredEmployees.length} of {employees.length} employees
-            </div>
-          </div>
+          <Button
+            onClick={() => setShowAddModal(true)}
+            size="lg"
+            className="btn-glow"
+          >
+            <UserPlus className="w-5 h-5 mr-2" />
+            Add Team Member
+          </Button>
         </div>
 
-        {/* Employee List */}
-        <div className="space-y-4">
-          {filteredEmployees.map((employee) => {
-            const company = getEmployeeCompany(employee.companyId);
-            const certCounts = getCertStatusCounts(employee.certifications);
-            const hasExpired = certCounts.expired > 0;
-            const hasExpiring = certCounts.expiring > 0;
-
-            return (
-              <Card
+        {/* Team Members Grid */}
+        {companyEmployees.length === 0 ? (
+          <EmptyState
+            icon={<Users className="w-12 h-12 text-gray-400" />}
+            title="No Team Members Yet"
+            description="Get started by adding your first crew member. Upload their photo, certifications, and track their experience."
+            actionLabel="Add First Team Member"
+            onAction={() => setShowAddModal(true)}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {companyEmployees.map((employee) => (
+              <div
                 key={employee.id}
-                className={`${
-                  hasExpired
-                    ? 'border-l-4 border-red-600'
-                    : hasExpiring
-                    ? 'border-l-4 border-orange-600'
-                    : ''
-                }`}
+                className="floating-panel p-6 relative group animate-fade-in"
               >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    {/* Employee Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-white font-semibold text-lg">
-                          {employee.firstName[0]}{employee.lastName[0]}
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {employee.firstName} {employee.lastName}
-                          </h3>
-                          <p className="text-sm text-gray-600">{employee.position}</p>
-                        </div>
-                      </div>
+                {/* Delete Button */}
+                <button
+                  onClick={() => handleDeleteEmployee(employee.id)}
+                  className="absolute top-4 right-4 p-2 bg-red-50 hover:bg-red-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <X className="w-4 h-4 text-red-600" />
+                </button>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Company</p>
-                          <div className="flex items-center space-x-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: company?.color }}
-                            />
-                            <p className="text-sm font-medium text-gray-900">{company?.name}</p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Contact</p>
-                          <p className="text-sm text-gray-900">{employee.email}</p>
-                          <p className="text-sm text-gray-600">{employee.phone}</p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Hire Date</p>
-                          <p className="text-sm text-gray-900">{formatDateShort(employee.hireDate)}</p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Role</p>
-                          <Badge variant="info" size="sm">
-                            {employee.role.replace('_', ' ')}
-                          </Badge>
-                        </div>
-                      </div>
+                {/* Photo */}
+                <div className="flex justify-center mb-4">
+                  {employee.photo ? (
+                    <img
+                      src={employee.photo}
+                      alt={`${employee.firstName} ${employee.lastName}`}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                      {employee.firstName[0]}
+                      {employee.lastName[0]}
                     </div>
+                  )}
+                </div>
 
-                    {/* Certification Status */}
-                    <div className="ml-6">
-                      <div className="bg-gray-50 rounded-lg p-4 min-w-[200px]">
-                        <p className="text-xs font-semibold text-gray-700 mb-3 uppercase">
-                          Certifications
-                        </p>
-                        <div className="space-y-2">
-                          {certCounts.valid > 0 && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">Valid</span>
-                              <Badge variant="success" size="sm">
-                                {certCounts.valid}
-                              </Badge>
-                            </div>
-                          )}
-                          {certCounts.expiring > 0 && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">Expiring</span>
-                              <Badge variant="warning" size="sm">
-                                {certCounts.expiring}
-                              </Badge>
-                            </div>
-                          )}
-                          {certCounts.expired > 0 && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">Expired</span>
-                              <Badge variant="danger" size="sm">
-                                {certCounts.expired}
-                              </Badge>
-                            </div>
-                          )}
-                          {employee.certifications.length === 0 && (
-                            <p className="text-sm text-gray-500 italic">No certifications</p>
-                          )}
-                        </div>
-                      </div>
+                {/* Name & Position */}
+                <div className="text-center mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {employee.firstName} {employee.lastName}
+                  </h3>
+                  <p className="text-gray-600 font-medium">
+                    {employee.position}
+                  </p>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-3 mb-4">
+                  {employee.email && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                      <span className="truncate">{employee.email}</span>
+                    </div>
+                  )}
+                  {employee.phone && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                      {employee.phone}
+                    </div>
+                  )}
+                  {employee.hireDate && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                      Hired: {new Date(employee.hireDate).toLocaleDateString()}
+                    </div>
+                  )}
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Briefcase className="w-4 h-4 mr-2 text-gray-400" />
+                    {employee.yearsExperience} years experience
+                  </div>
+                </div>
+
+                {/* Certificates Badge */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 font-medium">
+                      Certifications
+                    </span>
+                    <div className="flex items-center space-x-1">
+                      <Award className="w-4 h-4 text-green-600" />
+                      <span className="cert-badge valid px-2 py-1">
+                        {employee.certificates.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add Employee Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                onClick={() => setShowAddModal(false)}
+              />
+
+              {/* Modal */}
+              <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <UserPlus className="w-6 h-6 mr-2" />
+                      Add Team Member
+                    </h3>
+                    <button
+                      onClick={() => setShowAddModal(false)}
+                      className="p-2 hover:bg-blue-500 rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5 text-white" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Form */}
+                <div className="px-6 py-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  {/* Photo Upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Camera className="w-4 h-4 inline mr-1" />
+                      Employee Photo
+                    </label>
+                    <FileUpload
+                      onFilesSelected={(files) => setPhotoFile(files[0])}
+                      accept="image/*"
+                      maxFiles={1}
+                      maxSize={5}
+                    />
+                  </div>
+
+                  {/* Name Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.firstName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, firstName: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="John"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Last Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.lastName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, lastName: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Smith"
+                      />
                     </div>
                   </div>
 
-                  {/* Certification Details */}
-                  {employee.certifications.length > 0 && (
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {employee.certifications.map((cert) => {
-                          const status = getExpirationStatus(cert.daysUntilExpiration);
-                          return (
-                            <div
-                              key={cert.id}
-                              className="bg-gray-50 rounded-lg p-3 border border-gray-200"
-                            >
-                              <div className="flex items-start justify-between mb-2">
-                                <p className="text-sm font-semibold text-gray-900 flex-1">
-                                  {cert.name}
-                                </p>
-                                <Badge
-                                  variant={
-                                    status.status === 'expired'
-                                      ? 'danger'
-                                      : status.status === 'expiring_critical'
-                                      ? 'danger'
-                                      : status.status === 'expiring_soon'
-                                      ? 'warning'
-                                      : 'success'
-                                  }
-                                  size="sm"
-                                  pulse={status.status === 'expiring_critical'}
-                                >
-                                  {status.label}
-                                </Badge>
-                              </div>
-                              <div className="space-y-1 text-xs text-gray-600">
-                                <div className="flex justify-between">
-                                  <span>Issued:</span>
-                                  <span>{formatDateShort(cert.issueDate)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Expires:</span>
-                                  <span
-                                    className={
-                                      status.status === 'expired' || status.status === 'expiring_critical'
-                                        ? 'text-red-600 font-semibold'
-                                        : status.status === 'expiring_soon'
-                                        ? 'text-orange-600 font-semibold'
-                                        : ''
-                                    }
-                                  >
-                                    {formatDateShort(cert.expirationDate)}
-                                  </span>
-                                </div>
-                                {cert.certificateNumber && (
-                                  <div className="flex justify-between pt-1 border-t border-gray-300">
-                                    <span>Cert #:</span>
-                                    <span className="font-mono text-xs">{cert.certificateNumber}</span>
-                                  </div>
-                                )}
-                              </div>
+                  {/* Position */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Position *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.position}
+                      onChange={(e) =>
+                        setFormData({ ...formData, position: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Crew Leader, Roofer, Foreman, etc."
+                    />
+                  </div>
 
-                              {/* Action Required Warning */}
-                              {(status.status === 'expired' || status.status === 'expiring_critical') && (
-                                <div className="mt-2 pt-2 border-t border-gray-300">
-                                  <div className="flex items-center text-xs text-red-600 font-medium">
-                                    <AlertCircle className="w-3 h-3 mr-1" />
-                                    Action Required
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                  {/* Contact Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="john@example.com"
+                      />
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                  </div>
 
-        {/* No Results */}
-        {filteredEmployees.length === 0 && (
-          <div className="text-center py-12">
-            <Filter className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No employees found</h3>
-            <p className="text-gray-600">
-              Try adjusting your search or filters to find what you're looking for.
-            </p>
+                  {/* Hire Date & Experience */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Hire Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.hireDate}
+                        onChange={(e) =>
+                          setFormData({ ...formData, hireDate: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Years Experience
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.yearsExperience}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            yearsExperience: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="5"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Past Jobs */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Past Jobs / Notes
+                    </label>
+                    <textarea
+                      value={formData.pastJobs}
+                      onChange={(e) =>
+                        setFormData({ ...formData, pastJobs: e.target.value })
+                      }
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Notable projects, specializations, etc."
+                    />
+                  </div>
+
+                  {/* Certificates Upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Award className="w-4 h-4 inline mr-1" />
+                      Certifications (PDF, Images)
+                    </label>
+                    <FileUpload
+                      onFilesSelected={(files) => setCertificateFiles(files)}
+                      accept="image/*,.pdf"
+                      maxFiles={10}
+                      maxSize={10}
+                    />
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAddEmployee} className="btn-glow">
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    Add Team Member
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

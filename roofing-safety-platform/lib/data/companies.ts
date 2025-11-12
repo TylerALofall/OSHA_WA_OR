@@ -8,6 +8,7 @@ export const companies: Company[] = [
     address: 'Bend, OR 97701',
     website: 'http://eagleroofingbend.com/',
     phone: '(541) 555-0100',
+    email: 'info@eagleroofingbend.com',
     specialization: [
       'Commercial Flat Roofing',
       'PVC',
@@ -25,6 +26,7 @@ export const companies: Company[] = [
     location: 'Redmond, Oregon',
     address: '494 SW Veterans Way, Suite 8, Redmond, OR 97756',
     phone: '(541) 555-0200',
+    email: 'contact@centraloregonroofing.com',
     specialization: [
       'Residential & Commercial',
       'Single-ply',
@@ -44,6 +46,7 @@ export const companies: Company[] = [
     address: '722 N Hartford St, Kennewick, WA 99336',
     website: 'https://www.palmerroofing.net/',
     phone: '(509) 555-0300',
+    email: 'info@palmerroofing.net',
     specialization: [
       'Residential & Commercial',
       'Asphalt Shingles',
